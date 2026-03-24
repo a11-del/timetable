@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>時刻表 品川↔八幡宿</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="品川↔八幡宿">
+<meta name="theme-color" content="#070c18">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='36' fill='%23070c18'/%3E%3Ctext x='90' y='72' font-size='52' text-anchor='middle' dominant-baseline='middle'%3E🚌%3C/text%3E%3Ctext x='90' y='128' font-size='52' text-anchor='middle' dominant-baseline='middle'%3E🚄%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23070c18'/%3E%3Ctext x='32' y='26' font-size='20' text-anchor='middle' dominant-baseline='middle'%3E🚌%3C/text%3E%3Ctext x='32' y='46' font-size='20' text-anchor='middle' dominant-baseline='middle'%3E🚄%3C/text%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070c18;--surface:#0f1825;--surface2:#162032;--surface3:#1c2a40;
+  --border:#1e3050;--border2:#243a5a;
+  --accent-bus:#86efac;--accent-nex:#fbbf24;--accent-uchi:#38bdf8;
+  --accent-now:#f472b6;--accent-next:#a78bfa;
+  --text:#e2e8f0;--text-muted:#4a6080;--text-dim:#7a9ab8;--track:#0a1220;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;font-weight:300;min-height:100vh;padding-bottom:env(safe-area-inset-bottom);}
+
+/* BANNER */
+.add-banner{display:none;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:11px 15px;margin:12px 20px 0;font-size:.8rem;color:var(--text-dim);line-height:1.7;text-align:center;}
+.add-banner strong{color:var(--accent-uchi);}
+.add-banner.show{display:block;}
+
+/* HEADER */
+header{background:linear-gradient(135deg,#07101f,#0d1e3a 55%,#071525);border-bottom:1px solid var(--border);padding:18px 20px 14px;position:relative;overflow:hidden;}
+header::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 48px,rgba(56,120,200,.03) 48px,rgba(56,120,200,.03) 49px);pointer-events:none;}
+.header-inner{max-width:980px;margin:0 auto;position:relative;}
+.route-line{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+.station-tag{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:1.05rem;font-weight:500;letter-spacing:.04em;white-space:nowrap;}
+.arrow-tag{color:var(--text-muted);font-size:1rem;padding:0 2px;}
+.line-badge{display:inline-block;border-radius:3px;padding:2px 8px;font-size:.68rem;font-weight:700;letter-spacing:.07em;vertical-align:middle;margin-left:5px;}
+.badge-bus{background:var(--accent-bus);color:#022b10;}
+.badge-nex{background:var(--accent-nex);color:#1c0e00;}
+.badge-uchi{background:var(--accent-uchi);color:#001e33;}
+.clock-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+#clock-display{font-family:'Share Tech Mono',monospace;font-size:1.35rem;color:var(--text);letter-spacing:.05em;}
+#date-display{font-size:.82rem;color:var(--text-dim);}
+.day-type-badge{font-size:.72rem;font-weight:700;border-radius:4px;padding:2px 9px;letter-spacing:.06em;}
+.offset-badge{font-size:.7rem;background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3);border-radius:4px;padding:2px 8px;letter-spacing:.04em;white-space:nowrap;}
+.dt-weekday{background:rgba(56,189,248,.15);color:var(--accent-uchi);border:1px solid rgba(56,189,248,.3);}
+.dt-saturday{background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3);}
+.dt-holiday{background:rgba(244,114,182,.15);color:var(--accent-now);border:1px solid rgba(244,114,182,.3);}
+
+/* DIRECTION TOGGLE */
+.dir-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;}
+.dir-inner{max-width:980px;margin:0 auto;display:flex;align-items:center;gap:8px;}
+.dir-label{font-size:.75rem;color:var(--text-muted);letter-spacing:.07em;margin-right:4px;}
+.dir-btn{flex:1;max-width:220px;border-radius:8px;padding:8px 0;font-size:.85rem;font-family:'Noto Sans JP',sans-serif;font-weight:500;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);text-align:center;}
+.dir-btn:hover{border-color:var(--border2);color:var(--text);}
+.dir-btn.active{background:rgba(56,189,248,.12);border-color:rgba(56,189,248,.5);color:var(--accent-uchi);}
+.dir-btn.active.ret{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.45);color:var(--accent-nex);}
+
+/* PREVIEW BAR */
+.preview-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 20px;}
+.preview-inner{max-width:980px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.preview-label{font-size:.75rem;color:var(--text-muted);letter-spacing:.07em;white-space:nowrap;}
+.preview-input{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 10px;font-family:'Share Tech Mono',monospace;font-size:.88rem;outline:none;cursor:pointer;color-scheme:dark;}
+.preview-input:focus{border-color:#3a6fa0;}
+.preview-btn{background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.35);color:var(--accent-uchi);border-radius:6px;padding:5px 14px;font-size:.8rem;font-family:'Noto Sans JP',sans-serif;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.preview-btn:hover{background:rgba(56,189,248,.22);}
+.preview-btn.reset-btn{background:rgba(244,114,182,.08);border-color:rgba(244,114,182,.3);color:var(--accent-now);}
+.preview-btn.reset-btn:hover{background:rgba(244,114,182,.18);}
+.preview-mode-badge{font-size:.7rem;font-weight:700;border-radius:4px;padding:2px 8px;background:rgba(167,139,250,.18);color:#a78bfa;border:1px solid rgba(167,139,250,.35);display:none;letter-spacing:.05em;}
+.preview-mode-badge.visible{display:inline-block;}
+
+/* DAY TABS */
+.day-tabs{display:flex;gap:7px;padding:12px 20px;max-width:980px;margin:0 auto;border-bottom:1px solid var(--border);}
+.day-tab{background:var(--surface);border:1px solid var(--border);color:var(--text-dim);border-radius:7px;padding:7px 20px;font-size:.87rem;font-family:'Noto Sans JP',sans-serif;cursor:pointer;transition:all .2s;letter-spacing:.04em;font-weight:400;}
+.day-tab:hover{border-color:var(--border2);color:var(--text);}
+.day-tab.active{background:var(--surface2);border-color:#3a6fa0;color:var(--text);font-weight:500;}
+.day-tab.today-marker{position:relative;}
+.day-tab.today-marker::after{content:'今日';position:absolute;top:-8px;right:4px;background:var(--accent-now);color:#1a0010;font-size:.58rem;font-weight:700;border-radius:3px;padding:1px 5px;}
+
+/* MAIN */
+main{max-width:980px;margin:0 auto;padding:18px 20px;}
+
+/* NEXT PANEL */
+.next-panel{background:linear-gradient(135deg,var(--surface2),var(--surface3));border:1px solid var(--border2);border-radius:12px;padding:14px 18px;margin-bottom:22px;}
+.next-panel-title{font-size:.73rem;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:11px;display:flex;align-items:center;gap:8px;}
+.next-panel-title::before{content:'';display:block;width:6px;height:6px;border-radius:50%;background:var(--accent-now);box-shadow:0 0 8px var(--accent-now);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* ROUTE CARDS */
+.route-cards{display:flex;flex-direction:column;gap:10px;}
+.route-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .2s;}
+.route-card:hover{border-color:var(--border2);}
+.route-card.rc-first{border-color:rgba(244,114,182,.45);background:rgba(244,114,182,.04);}
+.rc-head{display:flex;align-items:center;gap:8px;padding:9px 14px 8px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.rc-num{font-size:.65rem;font-weight:700;border-radius:4px;padding:2px 8px;letter-spacing:.06em;}
+.rc-num-1{background:rgba(244,114,182,.2);color:var(--accent-now);border:1px solid rgba(244,114,182,.4);}
+.rc-num-2{background:rgba(167,139,250,.14);color:#a78bfa;border:1px solid rgba(167,139,250,.35);}
+.rc-num-3{background:rgba(56,189,248,.12);color:var(--accent-uchi);border:1px solid rgba(56,189,248,.3);}
+.rc-num-4{background:rgba(148,163,184,.1);color:#94a3b8;border:1px solid rgba(148,163,184,.25);}
+.rc-wait-tag{font-size:.72rem;font-weight:700;border-radius:4px;padding:2px 8px;}
+.rc-wait-soon{background:rgba(251,146,60,.18);color:#fb923c;border:1px solid rgba(251,146,60,.35);}
+.rc-wait-now{background:rgba(244,114,182,.2);color:var(--accent-now);border:1px solid rgba(244,114,182,.4);}
+.rc-wait-ok{background:rgba(148,163,184,.1);color:#94a3b8;border:1px solid rgba(148,163,184,.2);}
+
+.rc-body{display:grid;align-items:start;padding:11px 14px 0;gap:0;}
+.rc-row1{grid-template-columns:1fr auto 1fr;border-bottom:1px dashed var(--border);padding-bottom:10px;}
+.rc-row2{grid-template-columns:1fr auto 1fr;padding-top:10px;padding-bottom:11px;}
+/* 復路は1行だけ */
+.rc-row-single{grid-template-columns:1fr auto 1fr auto 1fr;padding-bottom:11px;border-bottom:none;}
+
+.rc-seg{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.rc-seg-icon{font-size:.72rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;}
+.rc-seg-badge{display:inline-block;font-size:.62rem;font-weight:700;border-radius:3px;padding:1px 6px;letter-spacing:.05em;}
+.seg-bus{background:rgba(134,239,172,.18);color:var(--accent-bus);border:1px solid rgba(134,239,172,.35);}
+.seg-nex{background:rgba(251,191,36,.16);color:var(--accent-nex);border:1px solid rgba(251,191,36,.35);}
+.seg-uchi-r{background:rgba(56,189,248,.16);color:var(--accent-uchi);border:1px solid rgba(56,189,248,.35);}
+.seg-uchi-l{background:rgba(148,163,184,.12);color:#94a3b8;border:1px solid rgba(148,163,184,.25);}
+.rc-seg-time{font-family:'Share Tech Mono',monospace;font-size:1.05rem;font-weight:700;letter-spacing:.03em;}
+.t-bus{color:var(--accent-bus);}
+.t-nex{color:var(--accent-nex);}
+.t-uchi{color:var(--accent-uchi);}
+.t-goal{color:#4ade80;}
+.rc-seg-sub{font-size:.7rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rc-seg-transfer{font-size:.68rem;color:var(--text-muted);margin-top:1px;}
+.rc-seg-transfer.tight{color:#fb923c;}
+.rc-arr{color:var(--text-muted);font-size:1.1rem;padding:0 5px;text-align:center;padding-top:14px;}
+
+/* TIMETABLE */
+.timetable-panel{margin-bottom:26px;}
+.section-header{display:flex;align-items:center;gap:11px;margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border);}
+.section-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;}
+.icon-bus{background:rgba(134,239,172,.1);color:var(--accent-bus);border:1px solid rgba(134,239,172,.3);}
+.icon-nex{background:rgba(251,191,36,.1);color:var(--accent-nex);border:1px solid rgba(251,191,36,.3);}
+.icon-uchi{background:rgba(56,189,248,.1);color:var(--accent-uchi);border:1px solid rgba(56,189,248,.3);}
+.section-title{font-size:.95rem;font-weight:500;letter-spacing:.03em;}
+.section-sub{font-size:.74rem;color:var(--text-muted);margin-top:2px;}
+
+.timetable-grid{display:grid;grid-template-columns:46px 1fr;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.hour-cell{background:var(--track);display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:1.05rem;color:var(--text-muted);border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:9px 0;}
+.trains-cell{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:9px 12px;border-bottom:1px solid var(--border);}
+.hour-cell:last-of-type,.trains-cell:last-of-type{border-bottom:none;}
+.hour-cell.past,.trains-cell.past{opacity:.22;}
+.hour-cell.cur{color:var(--accent-now);}
+
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:4px 9px;font-size:.8rem;cursor:default;transition:transform .15s,box-shadow .15s;white-space:nowrap;position:relative;}
+.chip:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.4);}
+.chip-bus{background:rgba(134,239,172,.08);border:1px solid rgba(134,239,172,.28);color:#bbf7d0;}
+.chip-nex{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);color:#fde68a;}
+.chip-rapid{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:#7dd3fc;}
+.chip-local{background:rgba(148,163,184,.06);border:1px solid rgba(148,163,184,.18);color:#94a3b8;}
+.chip .t{font-family:'Share Tech Mono',monospace;font-size:.88rem;font-weight:700;}
+.chip-bus .t{color:var(--accent-bus);}
+.chip-nex .t{color:var(--accent-nex);}
+.chip-rapid .t{color:var(--accent-uchi);}
+.chip-local .t{color:#94a3b8;}
+.chip .sub{font-size:.72rem;opacity:.7;}
+.chip .kind{font-size:.65rem;background:rgba(56,189,248,.18);border-radius:3px;padding:1px 4px;color:var(--accent-uchi);}
+.chip .narr{font-size:.7rem;color:#c9a43a;margin-left:2px;}
+.chip .narr-ret{font-size:.7rem;color:#86efac;margin-left:2px;}
+
+.chip.is-past{opacity:.22;pointer-events:none;}
+.chip.is-now{outline:2px solid var(--accent-now);outline-offset:1px;}
+.chip.is-now::after{content:'次';position:absolute;top:-8px;right:-4px;background:var(--accent-now);color:#1a0010;font-size:.55rem;font-weight:900;border-radius:3px;padding:1px 4px;}
+.chip.is-next{outline:2px solid var(--accent-next);outline-offset:1px;}
+.chip.is-next::after{content:'次々';position:absolute;top:-8px;right:-4px;background:var(--accent-next);color:#0d0022;font-size:.55rem;font-weight:900;border-radius:3px;padding:1px 4px;}
+
+.info-note{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 15px;font-size:.8rem;color:var(--text-dim);margin-bottom:14px;line-height:1.75;}
+.info-note.bn{border-left:3px solid var(--accent-bus);}
+.info-note.nn{border-left:3px solid var(--accent-nex);}
+.info-note.un{border-left:3px solid var(--accent-uchi);}
+.info-note strong{color:var(--text);font-weight:500;}
+.legend{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:14px;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:.76rem;color:var(--text-dim);}
+.ld{width:9px;height:9px;border-radius:2px;}
+.section-spacer{margin-top:26px;}
+.notice{font-size:.76rem;color:var(--text-muted);background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;padding:12px 15px;margin-top:18px;line-height:1.8;}
+.notice a{color:var(--accent-uchi);text-decoration:none;}
+.notice a:hover{text-decoration:underline;}
+
+/* direction-dependent visibility */
+.go-only{} .ret-only{display:none;}
+body.return-mode .go-only{display:none;}
+body.return-mode .ret-only{display:block;}
+body.return-mode .ret-only.timetable-panel{display:block;}
+
+@media(max-width:580px){
+  header{padding:14px 14px 12px;}main{padding:14px;}
+  .day-tabs{padding:10px 14px;gap:5px;}.day-tab{padding:6px 14px;font-size:.8rem;}
+  .station-tag{font-size:.9rem;padding:4px 9px;}
+  .timetable-grid{grid-template-columns:38px 1fr;}.hour-cell{font-size:.88rem;}
+  .dir-btn{font-size:.78rem;}
+  .rc-row-single{grid-template-columns:1fr auto 1fr auto 1fr;}
+}
+</style>
+</head>
+<body>
+
+<div id="add-banner" class="add-banner">
+  📱 <strong>ホーム画面に追加</strong> すると次回からアイコンで起動できます<br>
+  Safari → 下の <strong>共有ボタン</strong> →「ホーム画面に追加」をタップ
+</div>
+
+<header>
+<div class="header-inner">
+  <div id="route-display" class="route-line">
+    <!-- JS で書き換え -->
+  </div>
+  <div class="clock-bar">
+    <span id="clock-display">--:--:--</span>
+    <span id="date-display"></span>
+    <span id="day-badge" class="day-type-badge dt-weekday">平日</span>
+    <span class="offset-badge">🚶+20分</span>
+  </div>
+</div>
+</header>
+
+<!-- 往路/復路 切り替え -->
+<div class="dir-bar">
+  <div class="dir-inner">
+    <span class="dir-label">方向：</span>
+    <button class="dir-btn active" id="btn-go" onclick="setDirection('go')">🚌🚄 往路　自宅 → 八幡宿</button>
+    <button class="dir-btn ret" id="btn-ret" onclick="setDirection('ret')">🚄🚃 復路　八幡宿 → 品川</button>
+  </div>
+</div>
+
+<div class="preview-bar">
+  <div class="preview-inner">
+    <span class="preview-label">🔍 時刻プレビュー</span>
+    <input type="datetime-local" id="preview-dt" class="preview-input">
+    <button class="preview-btn" onclick="applyPreview()">この時刻で表示</button>
+    <button class="preview-btn reset-btn" onclick="resetPreview()">現在時刻に戻す</button>
+    <span id="preview-badge" class="preview-mode-badge">📅 プレビュー中</span>
+  </div>
+</div>
+
+<div class="day-tabs">
+  <button class="day-tab" id="tab-weekday" onclick="switchDay('weekday',this)">平日</button>
+  <button class="day-tab" id="tab-saturday" onclick="switchDay('saturday',this)">土曜</button>
+  <button class="day-tab" id="tab-holiday" onclick="switchDay('holiday',this)">休日・祝日</button>
+</div>
+
+<main>
+<!-- 乗り継ぎルート候補 -->
+<div class="next-panel">
+  <div id="route-panel-title" class="next-panel-title">乗り継ぎルート候補</div>
+  <div id="route-list"></div>
+  <div id="route-empty" style="display:none;font-size:.82rem;color:var(--text-muted);padding:8px 0;">本日の乗り継ぎ可能便はありません。</div>
+</div>
+
+<!-- ━━ 往路セクション ━━ -->
+<div class="go-only">
+  <!-- BUS -->
+  <div class="timetable-panel">
+    <div class="section-header">
+      <div class="section-icon icon-bus">🚌</div>
+      <div>
+        <div class="section-title">⓪ 都営バス 品93系統　品川警察署入口 → 品川駅高輪口</div>
+        <div class="section-sub">品川警察署入口 発時刻 ／ 品川駅高輪口まで約7〜8分</div>
+      </div>
+    </div>
+    <div class="info-note bn">
+      <strong>乗り場：</strong>品川警察署入口バス停（都営バス品93系統）　<strong>降り場：</strong>品川駅高輪口<br>
+      2024年9月17日改正ダイヤ　※2026年4月1日改正予定
+    </div>
+    <div id="bus-weekday" class="timetable-grid"></div>
+    <div id="bus-saturday" class="timetable-grid" style="display:none"></div>
+    <div id="bus-holiday" class="timetable-grid" style="display:none"></div>
+  </div>
+  <div class="section-spacer"></div>
+  <!-- NEX 往路 -->
+  <div class="timetable-panel">
+    <div class="section-header">
+      <div class="section-icon icon-nex">🚄</div>
+      <div>
+        <div class="section-title">① N'EX　品川 → 千葉</div>
+        <div class="section-sub">特急列車・全席指定　品川発 ／ 千葉着（所要約45分）</div>
+      </div>
+    </div>
+    <div class="info-note nn"><strong>注意：</strong>全席指定。乗車前に特急券をご購入ください。千葉停車便のみ表示。</div>
+    <div id="nex-go-weekday" class="timetable-grid"></div>
+    <div id="nex-go-saturday" class="timetable-grid" style="display:none"></div>
+    <div id="nex-go-holiday" class="timetable-grid" style="display:none"></div>
+  </div>
+  <div class="section-spacer"></div>
+  <!-- UCHI 往路 -->
+  <div class="timetable-panel">
+    <div class="section-header">
+      <div class="section-icon icon-uchi">🚃</div>
+      <div>
+        <div class="section-title">② 内房線　千葉 → 八幡宿</div>
+        <div class="section-sub">千葉発時刻（快速 約40分・普通 約45分で八幡宿着）</div>
+      </div>
+    </div>
+    <div class="info-note un"><strong>乗り換え：</strong>千葉駅での乗り換えは最低8〜12分を確保してください。</div>
+    <div class="legend">
+      <div class="legend-item"><div class="ld" style="background:rgba(56,189,248,.6)"></div>快速</div>
+      <div class="legend-item"><div class="ld" style="background:rgba(148,163,184,.4)"></div>普通</div>
+    </div>
+    <div id="uchi-go-weekday" class="timetable-grid"></div>
+    <div id="uchi-go-saturday" class="timetable-grid" style="display:none"></div>
+    <div id="uchi-go-holiday" class="timetable-grid" style="display:none"></div>
+  </div>
+</div><!-- /go-only -->
+
+<!-- ━━ 復路セクション ━━ -->
+<div class="ret-only">
+  <!-- UCHI 復路 -->
+  <div class="timetable-panel">
+    <div class="section-header">
+      <div class="section-icon icon-uchi">🚃</div>
+      <div>
+        <div class="section-title">① 内房線　八幡宿 → 千葉</div>
+        <div class="section-sub">八幡宿発時刻 ／ 千葉まで約40〜48分</div>
+      </div>
+    </div>
+    <div class="info-note un"><strong>乗り換え：</strong>千葉駅でN'EXへの乗り換えは最低10〜15分を確保してください。</div>
+    <div class="legend">
+      <div class="legend-item"><div class="ld" style="background:rgba(56,189,248,.6)"></div>快速</div>
+      <div class="legend-item"><div class="ld" style="background:rgba(148,163,184,.4)"></div>普通</div>
+    </div>
+    <div id="uchi-ret-weekday" class="timetable-grid"></div>
+    <div id="uchi-ret-saturday" class="timetable-grid" style="display:none"></div>
+    <div id="uchi-ret-holiday" class="timetable-grid" style="display:none"></div>
+  </div>
+  <div class="section-spacer"></div>
+  <!-- NEX 復路 -->
+  <div class="timetable-panel">
+    <div class="section-header">
+      <div class="section-icon icon-nex">🚄</div>
+      <div>
+        <div class="section-title">② N'EX　千葉 → 品川</div>
+        <div class="section-sub">特急列車・全席指定　千葉発 ／ 品川着（所要約45分）</div>
+      </div>
+    </div>
+    <div class="info-note nn"><strong>注意：</strong>全席指定。乗車前に特急券をご購入ください。千葉停車便のみ表示。</div>
+    <div id="nex-ret-weekday" class="timetable-grid"></div>
+    <div id="nex-ret-saturday" class="timetable-grid" style="display:none"></div>
+    <div id="nex-ret-holiday" class="timetable-grid" style="display:none"></div>
+  </div>
+</div><!-- /ret-only -->
+
+<div class="notice">
+  ⚠️ この時刻表は参考表示です。乗車前に
+  <a href="https://tobus.jp/sp/blsys/stop/time?stopid=2010&ud=2&poleno=2&routecode=161" target="_blank">都バス公式</a>・
+  <a href="https://www.jreast.co.jp/" target="_blank">JR東日本公式</a> で最新ダイヤをご確認ください。
+</div>
+</main>
+
+<script>
+// ━━ DATA ━━
+
+// 往路バス（品川警察署入口発）
+const BUS={
+  weekday:[[6,[19,36,49]],[7,[3,11,20,30,40,48,58]],[8,[7,14,20,27,33,39,47,55]],[9,[4,14,23,33,44,54]],[10,[4,14,24,35,46,59]],[11,[9,22,36,49]],[12,[2,15,27,37,47,57]],[13,[7,16,25,35,44,53]],[14,[3,14,25,37,47,57]],[15,[7,17,28,39,50]],[16,[1,12,23,33,43,54]],[17,[5,15,26,37,47,57]],[18,[8,18,28,39,51]],[19,[2,14,26,38,52]],[20,[7,21,36,50]],[21,[4,18,32,47]],[22,[3,17,32]]],
+  saturday:[[6,[19,36,47,59]],[7,[11,26,41,56]],[8,[10,20,29,38,47,56]],[9,[5,15,24,34,44,55]],[10,[6,17,28,39,50]],[11,[1,12,23,34,45,56]],[12,[7,18,29,40,51]],[13,[2,13,25,37,49]],[14,[2,16,27,38,50]],[15,[2,13,25,37,49]],[16,[1,13,25,37,48,59]],[17,[12,23,34,45,56]],[18,[8,20,31,43,54]],[19,[6,18,30,43,57]],[20,[11,25,39,53]],[21,[7,21,35,50]],[22,[6,20,35]]],
+  holiday:[[6,[18,35]],[7,[1,19,35,50]],[8,[5,21,34,47,59]],[9,[11,24,37,49]],[10,[1,12,22,32,43,55]],[11,[6,16,27,37,47,57]],[12,[7,17,27,37,47,57]],[13,[8,18,29,39,49,59]],[14,[9,19,29,39,49]],[15,[0,11,22,33,44,57]],[16,[8,20,31,43,55]],[17,[6,17,29,41,53]],[18,[5,17,29,41,53]],[19,[5,18,31,44,57]],[20,[11,25,39,53]],[21,[7,21,35,50]],[22,[4,18,33]]]
+};
+
+// 往路N'EX（品川発 → 千葉着）
+const NEX_GO={
+  weekday:[
+    {dep:[6,47],arr:[7,33],name:'1号'},{dep:[7,18],arr:[8,5],name:'3号'},{dep:[7,39],arr:[8,24],name:'5号'},
+    {dep:[8,19],arr:[9,4],name:'7号'},{dep:[9,2],arr:[9,47],name:'11号'},{dep:[9,50],arr:[10,35],name:'13号'},
+    {dep:[10,1],arr:[10,48],name:'15号'},{dep:[10,50],arr:[11,35],name:'17号'},{dep:[11,1],arr:[11,47],name:'19号'},
+    {dep:[11,50],arr:[12,35],name:'21号'},{dep:[12,1],arr:[12,47],name:'23号'},{dep:[12,50],arr:[13,35],name:'25号'},
+    {dep:[13,1],arr:[13,47],name:'27号'},{dep:[13,50],arr:[14,35],name:'29号'},{dep:[14,1],arr:[14,47],name:'31号'},
+    {dep:[14,50],arr:[15,35],name:'33号'},{dep:[15,1],arr:[15,47],name:'35号'},{dep:[15,50],arr:[16,35],name:'37号'},
+    {dep:[16,1],arr:[16,47],name:'39号'},{dep:[16,50],arr:[17,35],name:'41号'},{dep:[17,1],arr:[17,47],name:'43号'},
+    {dep:[17,50],arr:[18,35],name:'45号'},{dep:[18,1],arr:[18,49],name:'47号'}
+  ],
+  saturday:[
+    {dep:[6,5],arr:[6,50],name:'1号'},{dep:[6,47],arr:[7,33],name:'3号'},{dep:[7,18],arr:[8,3],name:'5号'},
+    {dep:[7,39],arr:[8,24],name:'7号'},{dep:[8,19],arr:[9,4],name:'9号'},{dep:[8,49],arr:[9,35],name:'11号'},
+    {dep:[9,2],arr:[9,47],name:'13号'},{dep:[9,50],arr:[10,35],name:'15号'},{dep:[10,1],arr:[10,47],name:'17号'},
+    {dep:[10,50],arr:[11,35],name:'19号'},{dep:[11,1],arr:[11,47],name:'21号'},{dep:[11,50],arr:[12,35],name:'23号'},
+    {dep:[12,1],arr:[12,47],name:'25号'},{dep:[12,50],arr:[13,35],name:'27号'},{dep:[13,1],arr:[13,47],name:'29号'},
+    {dep:[13,50],arr:[14,35],name:'31号'},{dep:[14,1],arr:[14,47],name:'33号'},{dep:[14,50],arr:[15,35],name:'35号'},
+    {dep:[15,1],arr:[15,47],name:'37号'},{dep:[15,50],arr:[16,35],name:'39号'},{dep:[16,1],arr:[16,47],name:'41号'},
+    {dep:[16,50],arr:[17,35],name:'43号'},{dep:[17,1],arr:[17,47],name:'45号'},{dep:[17,50],arr:[18,35],name:'47号'},
+    {dep:[18,1],arr:[18,49],name:'49号'}
+  ]
+};
+NEX_GO.holiday=NEX_GO.saturday;
+
+// 復路N'EX（千葉発 → 品川着）偶数号 千葉発時刻は品川着の約45分前
+// 品川着時刻: 8:12,8:49,9:16,9:46,10:15,10:45,11:14,11:44,12:20,12:45,13:14,13:45,14:20,14:45,15:14,15:44,16:20,16:44,17:16,17:45,18:15,18:49,19:14,19:49,20:44,21:44
+// 千葉発 = 品川着 - 45分
+const NEX_RET={
+  weekday:[
+    {dep:[7,27],arr:[8,12],name:'2号'},{dep:[8,4],arr:[8,49],name:'4号'},{dep:[8,31],arr:[9,16],name:'6号'},
+    {dep:[9,1],arr:[9,46],name:'8号'},{dep:[9,30],arr:[10,15],name:'12号'},{dep:[10,0],arr:[10,45],name:'14号'},
+    {dep:[10,29],arr:[11,14],name:'16号'},{dep:[10,59],arr:[11,44],name:'18号'},{dep:[11,35],arr:[12,20],name:'20号'},
+    {dep:[12,0],arr:[12,45],name:'22号'},{dep:[12,29],arr:[13,14],name:'24号'},{dep:[13,0],arr:[13,45],name:'26号'},
+    {dep:[13,35],arr:[14,20],name:'28号'},{dep:[14,0],arr:[14,45],name:'30号'},{dep:[14,29],arr:[15,14],name:'32号'},
+    {dep:[14,59],arr:[15,44],name:'34号'},{dep:[15,35],arr:[16,20],name:'36号'},{dep:[15,59],arr:[16,44],name:'38号'},
+    {dep:[16,31],arr:[17,16],name:'40号'},{dep:[17,0],arr:[17,45],name:'42号'},{dep:[17,30],arr:[18,15],name:'44号'},
+    {dep:[18,4],arr:[18,49],name:'46号'},{dep:[18,29],arr:[19,14],name:'48号'},{dep:[19,4],arr:[19,49],name:'50号'},
+    {dep:[19,59],arr:[20,44],name:'52号'},{dep:[20,59],arr:[21,44],name:'54号'}
+  ],
+  saturday:[
+    {dep:[7,27],arr:[8,12],name:'2号'},{dep:[8,4],arr:[8,49],name:'4号'},{dep:[8,31],arr:[9,16],name:'6号'},
+    {dep:[9,1],arr:[9,46],name:'8号'},{dep:[9,30],arr:[10,15],name:'12号'},{dep:[10,0],arr:[10,45],name:'14号'},
+    {dep:[10,29],arr:[11,14],name:'16号'},{dep:[10,59],arr:[11,44],name:'18号'},{dep:[11,35],arr:[12,20],name:'20号'},
+    {dep:[12,0],arr:[12,45],name:'22号'},{dep:[12,29],arr:[13,14],name:'24号'},{dep:[13,0],arr:[13,45],name:'26号'},
+    {dep:[13,35],arr:[14,20],name:'28号'},{dep:[14,0],arr:[14,45],name:'30号'},{dep:[14,29],arr:[15,14],name:'32号'},
+    {dep:[14,59],arr:[15,44],name:'34号'},{dep:[15,35],arr:[16,20],name:'36号'},{dep:[15,59],arr:[16,44],name:'38号'},
+    {dep:[16,31],arr:[17,16],name:'40号'},{dep:[17,0],arr:[17,45],name:'42号'},{dep:[17,30],arr:[18,15],name:'44号'},
+    {dep:[18,4],arr:[18,49],name:'46号'},{dep:[18,29],arr:[19,14],name:'48号'},{dep:[19,4],arr:[19,49],name:'50号'},
+    {dep:[19,59],arr:[20,44],name:'52号'},{dep:[20,59],arr:[21,44],name:'54号'}
+  ]
+};
+NEX_RET.holiday=NEX_RET.saturday;
+
+// 往路内房線（千葉発 → 八幡宿方面）
+const UCHI_GO={
+  weekday:[
+    {dep:[5,7],k:'l',d:'木更津'},{dep:[5,48],k:'l',d:'木更津'},
+    {dep:[6,8],k:'l',d:'木更津'},{dep:[6,27],k:'r',d:'君津'},{dep:[6,43],k:'r',d:'逗子'},{dep:[6,56],k:'l',d:'木更津'},
+    {dep:[7,0],k:'r',d:'逗子'},{dep:[7,11],k:'l',d:'木更津'},{dep:[7,20],k:'r',d:'逗子'},{dep:[7,26],k:'l',d:'八幡宿'},{dep:[7,38],k:'r',d:'東京'},{dep:[7,52],k:'l',d:'木更津'},
+    {dep:[8,5],k:'r',d:'逗子'},{dep:[8,18],k:'l',d:'木更津'},{dep:[8,37],k:'r',d:'逗子'},{dep:[8,55],k:'l',d:'木更津'},
+    {dep:[9,11],k:'r',d:'逗子'},{dep:[9,30],k:'l',d:'木更津'},{dep:[9,50],k:'r',d:'逗子'},
+    {dep:[10,7],k:'l',d:'木更津'},{dep:[10,24],k:'r',d:'逗子'},{dep:[10,48],k:'l',d:'木更津'},
+    {dep:[11,2],k:'r',d:'逗子'},{dep:[11,26],k:'l',d:'木更津'},{dep:[11,51],k:'r',d:'逗子'},
+    {dep:[12,7],k:'l',d:'木更津'},{dep:[12,24],k:'r',d:'逗子'},{dep:[12,49],k:'l',d:'木更津'},
+    {dep:[13,3],k:'r',d:'逗子'},{dep:[13,28],k:'l',d:'木更津'},{dep:[13,51],k:'r',d:'逗子'},
+    {dep:[14,7],k:'l',d:'木更津'},{dep:[14,25],k:'r',d:'逗子'},{dep:[14,49],k:'l',d:'木更津'},
+    {dep:[15,3],k:'r',d:'逗子'},{dep:[15,28],k:'l',d:'木更津'},{dep:[15,51],k:'r',d:'逗子'},
+    {dep:[16,9],k:'l',d:'木更津'},{dep:[16,22],k:'r',d:'逗子'},{dep:[16,35],k:'l',d:'木更津'},{dep:[16,53],k:'r',d:'逗子'},
+    {dep:[17,7],k:'l',d:'木更津'},{dep:[17,20],k:'r',d:'逗子'},{dep:[17,35],k:'l',d:'木更津'},{dep:[17,51],k:'r',d:'逗子'},
+    {dep:[18,7],k:'l',d:'木更津'},{dep:[18,22],k:'r',d:'逗子'},{dep:[18,37],k:'l',d:'木更津'},{dep:[18,52],k:'r',d:'逗子'},
+    {dep:[19,5],k:'l',d:'木更津'},{dep:[19,22],k:'r',d:'逗子'},{dep:[19,43],k:'l',d:'木更津'},{dep:[19,58],k:'r',d:'逗子'},
+    {dep:[20,13],k:'l',d:'木更津'},{dep:[20,27],k:'r',d:'逗子'},{dep:[20,52],k:'l',d:'木更津'}
+  ],
+  saturday:[
+    {dep:[6,10],k:'l',d:'木更津'},{dep:[6,32],k:'r',d:'逗子'},{dep:[6,56],k:'l',d:'木更津'},
+    {dep:[7,2],k:'r',d:'逗子'},{dep:[7,20],k:'l',d:'木更津'},{dep:[7,33],k:'r',d:'逗子'},{dep:[7,54],k:'l',d:'木更津'},
+    {dep:[8,12],k:'l',d:'木更津'},{dep:[8,22],k:'l',d:'木更津'},{dep:[8,41],k:'l',d:'木更津'},{dep:[8,55],k:'l',d:'木更津'},
+    {dep:[9,2],k:'r',d:'逗子'},{dep:[9,20],k:'l',d:'木更津'},{dep:[9,32],k:'r',d:'逗子'},{dep:[9,40],k:'l',d:'木更津'},{dep:[9,56],k:'l',d:'木更津'},
+    {dep:[10,7],k:'l',d:'木更津'},{dep:[10,25],k:'r',d:'逗子'},{dep:[10,47],k:'l',d:'木更津'},
+    {dep:[11,11],k:'l',d:'木更津'},{dep:[11,24],k:'r',d:'逗子'},{dep:[11,48],k:'l',d:'木更津'},
+    {dep:[12,9],k:'l',d:'木更津'},{dep:[12,25],k:'r',d:'逗子'},{dep:[12,47],k:'l',d:'木更津'},
+    {dep:[13,12],k:'l',d:'木更津'},{dep:[13,25],k:'r',d:'逗子'},{dep:[13,47],k:'l',d:'木更津'},
+    {dep:[14,10],k:'l',d:'木更津'},{dep:[14,25],k:'r',d:'久里浜'},{dep:[14,47],k:'l',d:'木更津'},
+    {dep:[15,8],k:'l',d:'木更津'},{dep:[15,24],k:'r',d:'久里浜'},{dep:[15,42],k:'l',d:'木更津'},
+    {dep:[16,4],k:'l',d:'木更津'},{dep:[16,13],k:'r',d:'久里浜'},{dep:[16,31],k:'l',d:'木更津'},{dep:[16,41],k:'l',d:'木更津'},{dep:[16,57],k:'l',d:'木更津'},
+    {dep:[17,9],k:'r',d:'久里浜'},{dep:[17,27],k:'l',d:'木更津'},{dep:[17,45],k:'l',d:'木更津'},{dep:[17,57],k:'l',d:'木更津'},
+    {dep:[18,9],k:'l',d:'木更津'},{dep:[18,29],k:'l',d:'木更津'},{dep:[18,51],k:'l',d:'木更津'}
+  ]
+};
+UCHI_GO.holiday=UCHI_GO.saturday;
+
+// 復路内房線（八幡宿発 → 千葉方面）  千葉着 = 発 + 約45分(普通)/40分(快速)
+const UCHI_RET={
+  weekday:[
+    {dep:[5,17],k:'l',d:'千葉'},{dep:[5,46],k:'l',d:'千葉'},
+    {dep:[6,13],k:'l',d:'千葉'},{dep:[6,34],k:'r',d:'東京'},{dep:[6,44],k:'r',d:'東京'},{dep:[6,54],k:'l',d:'千葉'},
+    {dep:[7,1],k:'r',d:'逗子'},{dep:[7,7],k:'l',d:'千葉'},{dep:[7,11],k:'r',d:'東京'},{dep:[7,18],k:'l',d:'千葉'},{dep:[7,31],k:'r',d:'逗子'},{dep:[7,36],k:'r',d:'逗子'},{dep:[7,42],k:'l',d:'千葉'},{dep:[7,47],k:'r',d:'東京'},{dep:[7,56],k:'r',d:'逗子'},
+    {dep:[8,10],k:'l',d:'千葉'},{dep:[8,20],k:'l',d:'千葉'},{dep:[8,39],k:'l',d:'千葉'},{dep:[8,53],k:'l',d:'千葉'},
+    {dep:[9,10],k:'r',d:'東京'},{dep:[9,18],k:'l',d:'千葉'},{dep:[9,30],k:'r',d:'逗子'},{dep:[9,38],k:'l',d:'千葉'},{dep:[9,54],k:'l',d:'千葉'},
+    {dep:[10,5],k:'l',d:'千葉'},{dep:[10,23],k:'r',d:'逗子'},{dep:[10,45],k:'l',d:'千葉'},
+    {dep:[11,9],k:'l',d:'千葉'},{dep:[11,22],k:'r',d:'逗子'},{dep:[11,46],k:'l',d:'千葉'},
+    {dep:[12,7],k:'l',d:'千葉'},{dep:[12,23],k:'r',d:'逗子'},{dep:[12,45],k:'l',d:'千葉'},
+    {dep:[13,10],k:'l',d:'千葉'},{dep:[13,23],k:'r',d:'逗子'},{dep:[13,45],k:'l',d:'千葉'},
+    {dep:[14,8],k:'l',d:'千葉'},{dep:[14,23],k:'r',d:'逗子'},{dep:[14,45],k:'l',d:'千葉'},
+    {dep:[15,6],k:'l',d:'千葉'},{dep:[15,22],k:'r',d:'久里浜'},{dep:[15,40],k:'l',d:'千葉'},
+    {dep:[16,2],k:'l',d:'千葉'},{dep:[16,11],k:'r',d:'久里浜'},{dep:[16,29],k:'l',d:'千葉'},{dep:[16,41],k:'l',d:'千葉'},{dep:[16,57],k:'l',d:'千葉'},
+    {dep:[17,7],k:'r',d:'久里浜'},{dep:[17,25],k:'l',d:'千葉'},{dep:[17,43],k:'l',d:'千葉'},{dep:[17,55],k:'l',d:'千葉'},
+    {dep:[18,7],k:'l',d:'千葉'},{dep:[18,22],k:'r',d:'逗子'},{dep:[18,37],k:'l',d:'千葉'},{dep:[18,52],k:'r',d:'逗子'},
+    {dep:[19,5],k:'l',d:'千葉'},{dep:[19,22],k:'r',d:'逗子'},{dep:[19,43],k:'l',d:'千葉'},{dep:[19,58],k:'r',d:'逗子'},
+    {dep:[20,11],k:'l',d:'千葉'},{dep:[20,27],k:'r',d:'逗子'},{dep:[20,52],k:'l',d:'千葉'},
+    {dep:[21,16],k:'l',d:'千葉'},{dep:[21,47],k:'l',d:'千葉'},
+    {dep:[22,9],k:'l',d:'千葉'},{dep:[22,43],k:'l',d:'千葉'}
+  ],
+  saturday:[
+    {dep:[5,25],k:'l',d:'千葉'},{dep:[5,53],k:'l',d:'千葉'},
+    {dep:[6,13],k:'l',d:'千葉'},{dep:[6,34],k:'r',d:'東京'},{dep:[6,44],k:'r',d:'東京'},{dep:[6,54],k:'l',d:'千葉'},
+    {dep:[7,1],k:'r',d:'逗子'},{dep:[7,7],k:'l',d:'千葉'},{dep:[7,11],k:'r',d:'東京'},{dep:[7,18],k:'l',d:'千葉'},{dep:[7,31],k:'r',d:'逗子'},{dep:[7,36],k:'r',d:'逗子'},{dep:[7,42],k:'l',d:'千葉'},{dep:[7,47],k:'r',d:'東京'},{dep:[7,56],k:'r',d:'逗子'},
+    {dep:[8,10],k:'l',d:'千葉'},{dep:[8,20],k:'l',d:'千葉'},{dep:[8,39],k:'l',d:'千葉'},{dep:[8,53],k:'l',d:'千葉'},
+    {dep:[9,10],k:'r',d:'東京'},{dep:[9,18],k:'l',d:'千葉'},{dep:[9,30],k:'r',d:'逗子'},{dep:[9,38],k:'l',d:'千葉'},{dep:[9,54],k:'l',d:'千葉'},
+    {dep:[10,5],k:'l',d:'千葉'},{dep:[10,23],k:'r',d:'逗子'},{dep:[10,45],k:'l',d:'千葉'},
+    {dep:[11,9],k:'l',d:'千葉'},{dep:[11,22],k:'r',d:'逗子'},{dep:[11,46],k:'l',d:'千葉'},
+    {dep:[12,7],k:'l',d:'千葉'},{dep:[12,23],k:'r',d:'逗子'},{dep:[12,45],k:'l',d:'千葉'},
+    {dep:[13,10],k:'l',d:'千葉'},{dep:[13,23],k:'r',d:'逗子'},{dep:[13,45],k:'l',d:'千葉'},
+    {dep:[14,8],k:'l',d:'千葉'},{dep:[14,23],k:'r',d:'久里浜'},{dep:[14,45],k:'l',d:'千葉'},
+    {dep:[15,6],k:'l',d:'千葉'},{dep:[15,22],k:'r',d:'久里浜'},{dep:[15,40],k:'l',d:'千葉'},
+    {dep:[16,2],k:'l',d:'千葉'},{dep:[16,11],k:'r',d:'久里浜'},{dep:[16,29],k:'l',d:'千葉'},{dep:[16,41],k:'l',d:'千葉'},{dep:[16,57],k:'l',d:'千葉'},
+    {dep:[17,7],k:'r',d:'久里浜'},{dep:[17,25],k:'l',d:'千葉'},{dep:[17,43],k:'l',d:'千葉'},{dep:[17,55],k:'l',d:'千葉'},
+    {dep:[18,9],k:'l',d:'千葉'},{dep:[18,29],k:'l',d:'千葉'},{dep:[18,51],k:'l',d:'千葉'},
+    {dep:[21,16],k:'l',d:'千葉'},{dep:[21,47],k:'l',d:'千葉'},
+    {dep:[22,9],k:'l',d:'千葉'},{dep:[22,43],k:'l',d:'千葉'}
+  ]
+};
+UCHI_RET.holiday=UCHI_RET.saturday;
+
+// ━━ HELPERS ━━
+const p2=n=>String(n).padStart(2,'0');
+const hm=(h,m)=>p2(h)+':'+p2(m);
+const toM=(h,m)=>h*60+m;
+const DOW=['日','月','火','水','木','金','土'];
+const HOL2026=['2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23','2026-10-12','2026-11-03','2026-11-23','2026-12-23'];
+function getDT(d){
+  const ds=d.toISOString().slice(0,10);
+  if(HOL2026.includes(ds)||d.getDay()===0) return 'holiday';
+  if(d.getDay()===6) return 'saturday';
+  return 'weekday';
+}
+
+// ━━ STATE ━━
+let direction='go'; // 'go' or 'ret'
+let state={dayType:'weekday',nowM:0};
+let initialized=false,previewMode=false,previewDatetime=null,lastMin=-1;
+let markerBus={n:null,n2:null},markerNex={n:null,n2:null},markerUchi={n:null,n2:null};
+
+// ━━ FLAT ━━
+function flatBus(dt){const a=[];for(const[h,ms]of BUS[dt])for(const m of ms)a.push({h,m,min:toM(h,m)});return a;}
+function flatNexGo(dt){return NEX_GO[dt].map(t=>({h:t.dep[0],m:t.dep[1],min:toM(t.dep[0],t.dep[1]),ah:t.arr[0],am:t.arr[1],name:t.name}));}
+function flatNexRet(dt){return NEX_RET[dt].map(t=>({h:t.dep[0],m:t.dep[1],min:toM(t.dep[0],t.dep[1]),ah:t.arr[0],am:t.arr[1],name:t.name}));}
+function flatUchiGo(dt){return UCHI_GO[dt].map(t=>({h:t.dep[0],m:t.dep[1],min:toM(t.dep[0],t.dep[1]),k:t.k,d:t.d}));}
+function flatUchiRet(dt){return UCHI_RET[dt].map(t=>({h:t.dep[0],m:t.dep[1],min:toM(t.dep[0],t.dep[1]),k:t.k,d:t.d}));}
+
+// ━━ TRANSFER CONSTANTS ━━
+const BUS_TO_SHINAGAWA=8, WALK_TO_NEX=10, CHB_TRANSFER_GO=10, CHB_TRANSFER_RET=12;
+const YAHATAJUKU_RAPID=40, YAHATAJUKU_NORMAL=45, CHIBA_FROM_YAHATAJUKU_RAPID=40, CHIBA_FROM_YAHATAJUKU_NORMAL=45;
+
+// ━━ COMPUTE ROUTES ━━
+function computeGoRoutes(dt,nowM,max=4){
+  const busList=flatBus(dt).filter(t=>t.min>=nowM);
+  const nexList=flatNexGo(dt);
+  const uchiList=flatUchiGo(dt);
+  const routes=[];
+  for(const bus of busList){
+    if(routes.length>=max) break;
+    const shinaArr=bus.min+BUS_TO_SHINAGAWA;
+    const nexBoard=shinaArr+WALK_TO_NEX;
+    const nex=nexList.find(n=>n.min>=nexBoard);
+    if(!nex) continue;
+    const chibaArr=toM(nex.ah,nex.am);
+    const uchiBoard=chibaArr+CHB_TRANSFER_GO;
+    const uchi=uchiList.find(u=>u.min>=uchiBoard);
+    if(!uchi) continue;
+    const goalMin=uchi.min+(uchi.k==='r'?YAHATAJUKU_RAPID:YAHATAJUKU_NORMAL);
+    const nexMargin=nex.min-shinaArr;
+    const uchiMargin=uchi.min-chibaArr;
+    routes.push({bus,nex,uchi,goalMin,nexMargin,uchiMargin});
+  }
+  const seen=new Set();
+  return routes.filter(r=>{const k=r.nex.min+'_'+r.uchi.min;if(seen.has(k))return false;seen.add(k);return true;}).slice(0,max);
+}
+
+function computeRetRoutes(dt,nowM,max=4){
+  const uchiList=flatUchiRet(dt).filter(t=>t.min>=nowM);
+  const nexList=flatNexRet(dt);
+  const routes=[];
+  for(const uchi of uchiList){
+    if(routes.length>=max) break;
+    const chibaArr=uchi.min+(uchi.k==='r'?CHIBA_FROM_YAHATAJUKU_RAPID:CHIBA_FROM_YAHATAJUKU_NORMAL);
+    const nexBoard=chibaArr+CHB_TRANSFER_RET;
+    const nex=nexList.find(n=>n.min>=nexBoard);
+    if(!nex) continue;
+    const shinaArr=toM(nex.ah,nex.am);
+    const uchiMargin=nex.min-chibaArr;
+    routes.push({uchi,nex,chibaArr,shinaArr,goalMin:shinaArr,uchiMargin});
+  }
+  const seen=new Set();
+  return routes.filter(r=>{const k=r.uchi.min+'_'+r.nex.min;if(seen.has(k))return false;seen.add(k);return true;}).slice(0,max);
+}
+
+// ━━ RENDER ROUTES ━━
+function updateNC(){
+  const{dayType,nowM}=state;
+  const list=document.getElementById('route-list');
+  const empty=document.getElementById('route-empty');
+  const numClass=['rc-num-1','rc-num-2','rc-num-3','rc-num-4'];
+  const numLabel=['最速','第2案','第3案','第4案'];
+
+  if(direction==='go'){
+    const routes=computeGoRoutes(dayType,nowM,4);
+    markerBus={n:routes[0]?.bus||null,n2:routes[1]?.bus||null};
+    markerNex={n:routes[0]?.nex||null,n2:routes[1]?.nex||null};
+    markerUchi={n:routes[0]?.uchi||null,n2:routes[1]?.uchi||null};
+    if(!routes.length){list.innerHTML='';empty.style.display='block';return;}
+    empty.style.display='none';
+    list.innerHTML='<div class="route-cards">'+routes.map((r,i)=>{
+      const wait=r.bus.min-nowM;
+      let wt=wait<=0?`<span class="rc-wait-tag rc-wait-now">⬤ まもなく</span>`:
+              wait<=5?`<span class="rc-wait-tag rc-wait-soon">バスまで${wait}分</span>`:
+                      `<span class="rc-wait-tag rc-wait-ok">バスまで${wait}分</span>`;
+      const nm=r.nexMargin,um=r.uchiMargin;
+      const nms=nm>=0?`品川乗換${nm}分余裕`:'乗換注意';
+      const ums=um>=0?`千葉乗換${um}分余裕`:'乗換注意';
+      const yaH=Math.floor(r.goalMin/60)%24,yaM=r.goalMin%60;
+      const uk=r.uchi.k==='r'?'快速':'普通';
+      const usc=r.uchi.k==='r'?'seg-uchi-r':'seg-uchi-l';
+      return `<div class="route-card${i===0?' rc-first':''}">
+        <div class="rc-head"><span class="rc-num ${numClass[i]}">${numLabel[i]}</span>${wt}</div>
+        <div class="rc-body rc-row1">
+          <div class="rc-seg">
+            <div class="rc-seg-icon"><span class="rc-seg-badge seg-bus">品93</span></div>
+            <div class="rc-seg-time t-bus">${hm(r.bus.h,r.bus.m)}</div>
+            <div class="rc-seg-sub">品川警察署入口 発</div>
+          </div>
+          <div class="rc-arr">→</div>
+          <div class="rc-seg">
+            <div class="rc-seg-icon"><span class="rc-seg-badge seg-nex">N'EX ${r.nex.name}</span></div>
+            <div class="rc-seg-time t-nex">${hm(r.nex.h,r.nex.m)} <span style="font-size:.72rem;color:var(--text-muted)">→</span> ${hm(r.nex.ah,r.nex.am)}</div>
+            <div class="rc-seg-sub">品川発 → 千葉着</div>
+            <div class="rc-seg-transfer${nm<5?' tight':''}">🏃 ${nms}</div>
+          </div>
+        </div>
+        <div class="rc-body rc-row2">
+          <div class="rc-seg">
+            <div class="rc-seg-icon"><span class="rc-seg-badge ${usc}">${uk}</span></div>
+            <div class="rc-seg-time t-uchi">${hm(r.uchi.h,r.uchi.m)}</div>
+            <div class="rc-seg-sub">千葉発 →${r.uchi.d}</div>
+            <div class="rc-seg-transfer${um<8?' tight':''}">🔄 ${ums}</div>
+          </div>
+          <div class="rc-arr">→</div>
+          <div class="rc-seg">
+            <div class="rc-seg-icon" style="color:#4ade80">🏁 八幡宿</div>
+            <div class="rc-seg-time t-goal">${hm(yaH,yaM)}</div>
+            <div class="rc-seg-sub">八幡宿 着</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('')+'</div>';
+  } else {
+    // 復路
+    const routes=computeRetRoutes(dayType,nowM,4);
+    markerUchi={n:routes[0]?.uchi||null,n2:routes[1]?.uchi||null};
+    markerNex={n:routes[0]?.nex||null,n2:routes[1]?.nex||null};
+    markerBus={n:null,n2:null};
+    if(!routes.length){list.innerHTML='';empty.style.display='block';return;}
+    empty.style.display='none';
+    list.innerHTML='<div class="route-cards">'+routes.map((r,i)=>{
+      const wait=r.uchi.min-nowM;
+      let wt=wait<=0?`<span class="rc-wait-tag rc-wait-now">⬤ まもなく</span>`:
+              wait<=5?`<span class="rc-wait-tag rc-wait-soon">内房線まで${wait}分</span>`:
+                      `<span class="rc-wait-tag rc-wait-ok">内房線まで${wait}分</span>`;
+      const um=r.uchiMargin;
+      const ums=um>=0?`千葉乗換${um}分余裕`:'乗換注意';
+      const uk=r.uchi.k==='r'?'快速':'普通';
+      const usc=r.uchi.k==='r'?'seg-uchi-r':'seg-uchi-l';
+      const goaH=Math.floor(r.goalMin/60)%24,goaM=r.goalMin%60;
+      return `<div class="route-card${i===0?' rc-first':''}">
+        <div class="rc-head"><span class="rc-num ${numClass[i]}">${numLabel[i]}</span>${wt}</div>
+        <div class="rc-body rc-row-single">
+          <div class="rc-seg">
+            <div class="rc-seg-icon"><span class="rc-seg-badge ${usc}">${uk}</span></div>
+            <div class="rc-seg-time t-uchi">${hm(r.uchi.h,r.uchi.m)}</div>
+            <div class="rc-seg-sub">八幡宿発 → 千葉方面</div>
+          </div>
+          <div class="rc-arr">→</div>
+          <div class="rc-seg">
+            <div class="rc-seg-icon"><span class="rc-seg-badge seg-nex">N'EX ${r.nex.name}</span></div>
+            <div class="rc-seg-time t-nex">${hm(r.nex.h,r.nex.m)} <span style="font-size:.72rem;color:var(--text-muted)">→</span> ${hm(r.nex.ah,r.nex.am)}</div>
+            <div class="rc-seg-sub">千葉発 → 品川着</div>
+            <div class="rc-seg-transfer${um<8?' tight':''}">🔄 ${ums}</div>
+          </div>
+          <div class="rc-arr">→</div>
+          <div class="rc-seg">
+            <div class="rc-seg-icon" style="color:#4ade80">🏁 品川</div>
+            <div class="rc-seg-time t-goal">${hm(goaH,goaM)}</div>
+            <div class="rc-seg-sub">品川 着</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('')+'</div>';
+  }
+}
+
+// ━━ BUILD GRIDS ━━
+function mkGrid(el,rows,nm,nxt,nxt2,chipFn){
+  if(!el)return;
+  let h='';
+  const byH={};
+  for(const t of rows){const hh=t.dep[0];if(!byH[hh])byH[hh]=[];byH[hh].push(t);}
+  const hours=[...new Set(rows.map(t=>t.dep[0]))];
+  for(const hh of hours){
+    const past=toM(hh,59)<nm,cur=hh===Math.floor(nm/60)&&!past;
+    const rc=past?'past':cur?'cur':'';
+    h+=`<div class="hour-cell ${rc}">${p2(hh)}</div><div class="trains-cell ${rc}">`;
+    for(const t of byH[hh]){
+      const tmin=toM(t.dep[0],t.dep[1]);
+      let cc=tmin<nm?'is-past':nxt&&tmin===nxt.min?'is-now':nxt2&&tmin===nxt2.min?'is-next':'';
+      h+=chipFn(t,cc);
+    }
+    h+='</div>';
+  }
+  el.innerHTML=h;
+}
+
+function buildAll(){
+  const{dayType,nowM}=state;
+  const nm=nowM;
+  const DT=['weekday','saturday','holiday'];
+
+  // 往路BUS
+  for(const dt of DT){
+    const el=document.getElementById(`bus-${dt}`);
+    const rows=[];for(const[h,ms]of BUS[dt])for(const m of ms)rows.push({dep:[h,m]});
+    const nb=dt===dayType?markerBus.n:null,nb2=dt===dayType?markerBus.n2:null;
+    const active=dt===dayType?nm:99999;
+    mkGrid(el,rows,active,nb,nb2,(t,cc)=>`<div class="chip chip-bus ${cc}"><span class="t">${hm(t.dep[0],t.dep[1])}</span></div>`);
+  }
+  // 往路NEX
+  for(const dt of DT){
+    const el=document.getElementById(`nex-go-${dt}`);
+    const rows=NEX_GO[dt].map(t=>({dep:t.dep,arr:t.arr,name:t.name}));
+    const nn=dt===dayType?markerNex.n:null,nn2=dt===dayType?markerNex.n2:null;
+    const active=dt===dayType?nm:99999;
+    mkGrid(el,rows,active,nn,nn2,(t,cc)=>`<div class="chip chip-nex ${cc}"><span class="t">${hm(t.dep[0],t.dep[1])}</span><span class="sub">${t.name}</span><span class="narr">→千葉${hm(t.arr[0],t.arr[1])}</span></div>`);
+  }
+  // 往路UCHI
+  for(const dt of DT){
+    const el=document.getElementById(`uchi-go-${dt}`);
+    const rows=UCHI_GO[dt].map(t=>({dep:t.dep,k:t.k,d:t.d}));
+    const nu=dt===dayType?markerUchi.n:null,nu2=dt===dayType?markerUchi.n2:null;
+    const active=dt===dayType?nm:99999;
+    mkGrid(el,rows,active,nu,nu2,(t,cc)=>{
+      const c=t.k==='r'?'chip-rapid':'chip-local';
+      return `<div class="chip ${c} ${cc}">${t.k==='r'?'<span class="kind">快</span>':''}<span class="t">${hm(t.dep[0],t.dep[1])}</span><span class="sub">→${t.d}</span></div>`;
+    });
+  }
+  // 復路UCHI
+  for(const dt of DT){
+    const el=document.getElementById(`uchi-ret-${dt}`);
+    const rows=UCHI_RET[dt].map(t=>({dep:t.dep,k:t.k,d:t.d}));
+    const nu=dt===dayType?markerUchi.n:null,nu2=dt===dayType?markerUchi.n2:null;
+    const active=dt===dayType?nm:99999;
+    mkGrid(el,rows,active,nu,nu2,(t,cc)=>{
+      const c=t.k==='r'?'chip-rapid':'chip-local';
+      return `<div class="chip ${c} ${cc}">${t.k==='r'?'<span class="kind">快</span>':''}<span class="t">${hm(t.dep[0],t.dep[1])}</span><span class="sub">→${t.d}</span></div>`;
+    });
+  }
+  // 復路NEX
+  for(const dt of DT){
+    const el=document.getElementById(`nex-ret-${dt}`);
+    const rows=NEX_RET[dt].map(t=>({dep:t.dep,arr:t.arr,name:t.name}));
+    const nn=dt===dayType?markerNex.n:null,nn2=dt===dayType?markerNex.n2:null;
+    const active=dt===dayType?nm:99999;
+    mkGrid(el,rows,active,nn,nn2,(t,cc)=>`<div class="chip chip-nex ${cc}"><span class="t">${hm(t.dep[0],t.dep[1])}</span><span class="sub">${t.name}</span><span class="narr-ret">→品川${hm(t.arr[0],t.arr[1])}</span></div>`);
+  }
+}
+
+// ━━ DIRECTION SWITCH ━━
+function setDirection(dir){
+  direction=dir;
+  document.getElementById('btn-go').classList.toggle('active',dir==='go');
+  document.getElementById('btn-ret').classList.toggle('active',dir==='ret');
+  document.getElementById('btn-ret').classList.toggle('ret',dir==='ret');
+  document.body.classList.toggle('return-mode',dir==='ret');
+  // ヘッダーのルート表示
+  const rd=document.getElementById('route-display');
+  if(dir==='go'){
+    rd.innerHTML=`<span class="station-tag">自宅</span><span class="arrow-tag">→</span><span class="station-tag">品川警察署入口 <span class="line-badge badge-bus">品93</span></span><span class="arrow-tag">→</span><span class="station-tag">品川駅高輪口</span><span class="arrow-tag">→</span><span class="station-tag">千葉 <span class="line-badge badge-nex">N'EX</span></span><span class="arrow-tag">→</span><span class="station-tag">八幡宿 <span class="line-badge badge-uchi">内房線</span></span>`;
+  } else {
+    rd.innerHTML=`<span class="station-tag">八幡宿 <span class="line-badge badge-uchi">内房線</span></span><span class="arrow-tag">→</span><span class="station-tag">千葉 <span class="line-badge badge-nex">N'EX</span></span><span class="arrow-tag">→</span><span class="station-tag">品川駅</span>`;
+  }
+  // 時刻表グリッドの表示切り替え
+  const dt=state.dayType;
+  const DT=['weekday','saturday','holiday'];
+  for(const t of DT){
+    document.getElementById(`bus-${t}`).style.display=t===dt&&dir==='go'?'grid':'none';
+    document.getElementById(`nex-go-${t}`).style.display=t===dt&&dir==='go'?'grid':'none';
+    document.getElementById(`uchi-go-${t}`).style.display=t===dt&&dir==='go'?'grid':'none';
+    document.getElementById(`uchi-ret-${t}`).style.display=t===dt&&dir==='ret'?'grid':'none';
+    document.getElementById(`nex-ret-${t}`).style.display=t===dt&&dir==='ret'?'grid':'none';
+  }
+  document.getElementById('route-panel-title').textContent=dir==='go'?'乗り継ぎルート候補（往路）':'乗り継ぎルート候補（復路）';
+  updateNC();
+  buildAll();
+}
+
+// ━━ DAY SWITCH ━━
+function switchDay(dt,btn){
+  state.dayType=dt;
+  document.querySelectorAll('.day-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  const DT=['weekday','saturday','holiday'];
+  for(const t of DT){
+    document.getElementById(`bus-${t}`).style.display=t===dt&&direction==='go'?'grid':'none';
+    document.getElementById(`nex-go-${t}`).style.display=t===dt&&direction==='go'?'grid':'none';
+    document.getElementById(`uchi-go-${t}`).style.display=t===dt&&direction==='go'?'grid':'none';
+    document.getElementById(`uchi-ret-${t}`).style.display=t===dt&&direction==='ret'?'grid':'none';
+    document.getElementById(`nex-ret-${t}`).style.display=t===dt&&direction==='ret'?'grid':'none';
+  }
+  updateNC();
+  buildAll();
+}
+
+// ━━ PREVIEW ━━
+function applyPreview(){
+  const val=document.getElementById('preview-dt').value;
+  if(!val) return;
+  previewDatetime=new Date(val);previewMode=true;
+  document.getElementById('preview-badge').classList.add('visible');
+  applyDatetime(previewDatetime);
+}
+function resetPreview(){
+  previewMode=false;previewDatetime=null;
+  document.getElementById('preview-badge').classList.remove('visible');
+  initialized=false;lastMin=-1;tick();
+}
+function applyDatetime(dt){
+  const hh=dt.getHours(),mm=dt.getMinutes();
+  document.getElementById('clock-display').textContent=`${p2(hh)}:${p2(mm)}:00`;
+  const Y=dt.getFullYear(),Mo=dt.getMonth()+1,D=dt.getDate(),dow=DOW[dt.getDay()];
+  document.getElementById('date-display').textContent=`${Y}年${p2(Mo)}月${p2(D)}日（${dow}）`;
+  const dtype=getDT(dt);
+  const badge=document.getElementById('day-badge');
+  badge.className='day-type-badge';
+  const labels={weekday:['dt-weekday','平日'],saturday:['dt-saturday','土曜'],holiday:['dt-holiday','休日・祝日']};
+  badge.classList.add(labels[dtype][0]);badge.textContent=labels[dtype][1];
+  state.dayType=dtype;state.nowM=toM(hh,mm)+20;  // 出発地から20分後を基準
+  document.querySelectorAll('.day-tab').forEach(t=>t.classList.remove('active','today-marker'));
+  const tabMap={weekday:'tab-weekday',saturday:'tab-saturday',holiday:'tab-holiday'};
+  const at=document.getElementById(tabMap[dtype]);at.classList.add('active');
+  const ts=new Date().toISOString().slice(0,10),ps=dt.toISOString().slice(0,10);
+  if(ts===ps) at.classList.add('today-marker');
+  setDirection(direction); // refreshes grids
+}
+
+// ━━ TICK ━━
+function tick(){
+  if(previewMode) return;
+  const now=new Date();
+  const hh=now.getHours(),mm=now.getMinutes(),ss=now.getSeconds();
+  document.getElementById('clock-display').textContent=`${p2(hh)}:${p2(mm)}:${p2(ss)}`;
+  const Y=now.getFullYear(),Mo=now.getMonth()+1,D=now.getDate(),dow=DOW[now.getDay()];
+  document.getElementById('date-display').textContent=`${Y}年${p2(Mo)}月${p2(D)}日（${dow}）`;
+  const dt=getDT(now);
+  const badge=document.getElementById('day-badge');
+  badge.className='day-type-badge';
+  const labels={weekday:['dt-weekday','平日'],saturday:['dt-saturday','土曜'],holiday:['dt-holiday','休日・祝日']};
+  badge.classList.add(labels[dt][0]);badge.textContent=labels[dt][1];
+
+  if(!initialized){
+    initialized=true;
+    state.dayType=dt;state.nowM=toM(hh,mm)+20;  // 出発地から20分後を基準
+    document.querySelectorAll('.day-tab').forEach(t=>t.classList.remove('active','today-marker'));
+    const tabMap={weekday:'tab-weekday',saturday:'tab-saturday',holiday:'tab-holiday'};
+    document.getElementById(tabMap[dt]).classList.add('active','today-marker');
+    const tomorrow=new Date(now);tomorrow.setDate(tomorrow.getDate()+1);tomorrow.setHours(9,0,0,0);
+    const tY=tomorrow.getFullYear(),tM=String(tomorrow.getMonth()+1).padStart(2,'0'),tD=String(tomorrow.getDate()).padStart(2,'0');
+    document.getElementById('preview-dt').value=`${tY}-${tM}-${tD}T09:00`;
+    setDirection('go');
+  }
+
+  const curMin=toM(hh,mm)+20;  // 出発地から八幡宿駅まで20分
+  if(curMin!==lastMin){
+    lastMin=curMin;state.nowM=curMin;
+    updateNC();buildAll();
+  }
+}
+
+// ━━ BANNER ━━
+(function(){
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  if(isIOS&&!window.navigator.standalone){
+    const b=document.getElementById('add-banner');if(b)b.classList.add('show');
+  }
+})();
+
+tick();
+setInterval(tick,1000);
+</script>
+</body>
+</html>
